@@ -17,7 +17,7 @@ import javax.servlet.http.HttpServletResponse
 @RestController
 class MainController {
     @GetMapping("/hello")
-    fun test() = "Hello, TEST!"
+    fun test() = "Hello, TEST 3!"
 
     fun download(urlStr: String): ByteArray {
         val url = URL(urlStr)
