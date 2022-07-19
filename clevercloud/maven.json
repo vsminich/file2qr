@@ -1,5 +1,5 @@
 {
   "deploy": {
-    "goal": "-Dtest.active=false -Dexec.mainClass=\"nt.file2qr.File2qrApplication\" assembly:jar-with-dependencies exec:java"
+    "goal": "-Dtest.active=false -Dexec.mainClass=\"nt.file2qr.File2qrApplication\" assembly:single exec:java"
   }
 }
