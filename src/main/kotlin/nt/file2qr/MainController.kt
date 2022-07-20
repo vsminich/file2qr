@@ -102,4 +102,74 @@ class MainController {
                 )
             }
     }
+
+    // version 2
+
+    fun ByteArray.buildBuffer2(start: Int, len: Int, size: Int): ByteArray {
+        val end = min(start + len, size)
+        val data = copyOfRange(start, end)
+        return ByteBuffer.allocate(Int.SIZE_BYTES).putInt(start).array()
+            .plus(ByteBuffer.allocate(Int.SIZE_BYTES).putInt(end).array())
+            .plus(ByteBuffer.allocate(Int.SIZE_BYTES).putInt(size).array())
+            .plus(data)
+    }
+
+    @GetMapping("/qr2")
+    fun getQR2(
+        response: HttpServletResponse,
+        @RequestParam len: Int,
+        @RequestParam off: Int,
+        @RequestParam(required = false) size: Int?,
+        @RequestParam(required = false) base64: Boolean?,
+    ) {
+        response.contentType = MediaType.IMAGE_JPEG_VALUE
+        prepared
+            ?.takeUnless { off > prepared.size }
+            ?.buildBuffer2(off, len, prepared.size)
+            ?.let {
+                if (base64 == true) it.let(Base64::encodeBase64).let(::String) else it.let(::encodeToBase45QrPayload)
+            }
+            ?.let {
+                QrCode.createQR(
+                    it, "png", size ?: defaultImageSize, size ?: defaultImageSize,
+                    response.outputStream
+                )
+            }
+    }
+
+    @GetMapping("/seq")
+    @ResponseBody
+    fun seq(
+        @RequestParam(required = false) len: Int?,
+        @RequestParam(required = false) off: Int?,
+        @RequestParam(required = false) shrink: Int?,
+        @RequestParam(required = false) size: Int?,
+        @RequestParam(required = false) base64: Boolean?,
+    ): String {
+        base64mode = base64 ?: false
+        val l = len ?: defaultLen
+        val s = shrink ?: l.takeIf { it < 500 }?.div(4) ?: 100
+        val o = off ?: 0
+        val result = "<html><body><img src=\"/qr2?len=$l&off=$o&size=${size ?: defaultImageSize}&base64=$base64mode\"></img></body></html>"
+        return if (o + l >= prepared.size) result else
+            """
+                <script>
+                    document.addEventListener('keydown', (event) => {
+                      if (event.code == 'KeyS') {
+                        shrink();
+                      } else {
+                        next();
+                      }
+                    }, false);
+                
+                
+                    function next(){
+                        window.location.href = '/seq?len=$l&off=${o + l}&size=${size ?: defaultImageSize}&base64=$base64mode';
+                    }
+                    function shrink(){
+                        window.location.href = '/seq?len=${l.minus(s)}&off=${o}&size=${size ?: defaultImageSize}&base64=$base64mode';
+                    }
+                </script>
+            """.trimIndent().plus(result)
+    }
 }
